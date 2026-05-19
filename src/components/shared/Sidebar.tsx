@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import {
   LayoutDashboard,
   Briefcase,
@@ -9,6 +10,8 @@ import {
   Calendar,
   Bell,
   Download,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +25,7 @@ const nav = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { resolvedTheme, setTheme } = useTheme();
 
   return (
     <aside className="w-56 shrink-0 border-r bg-card flex flex-col h-full">
@@ -47,7 +51,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-3 border-t">
+      <div className="p-3 border-t space-y-0.5">
         <a
           href="/api/export"
           className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -55,6 +59,13 @@ export function Sidebar() {
           <Download className="h-4 w-4 shrink-0" />
           Export CSV
         </a>
+        <button
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          {resolvedTheme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+          {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
       </div>
     </aside>
   );
