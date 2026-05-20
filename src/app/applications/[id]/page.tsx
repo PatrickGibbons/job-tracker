@@ -4,8 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import MDEditor from "@uiw/react-md-editor";
 import { formatDistanceToNow, format } from "date-fns";
 import {
@@ -339,7 +337,6 @@ function NotesTab({ applicationId }: { applicationId: number }) {
               onChange={(v) => setNewContent(v ?? "")}
               preview="edit"
               height={160}
-              visibleDragbar={false}
             />
           </div>
           <Button
@@ -371,7 +368,6 @@ function NotesTab({ applicationId }: { applicationId: number }) {
                         onChange={(v) => setEditContent(v ?? "")}
                         preview="edit"
                         height={160}
-                        visibleDragbar={false}
                       />
                     </div>
                     <div className="flex gap-2">
@@ -388,11 +384,9 @@ function NotesTab({ applicationId }: { applicationId: number }) {
                     </div>
                   </div>
                 ) : (
-                  <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {note.content}
-                    </ReactMarkdown>
-                  </div>
+                  <pre className="text-sm whitespace-pre-wrap break-words font-sans m-0 leading-relaxed">
+                    {note.content}
+                  </pre>
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">
