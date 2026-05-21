@@ -469,6 +469,7 @@ function InterviewsTab({ applicationId }: { applicationId: number }) {
   const [isLoading, setIsLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({
     type: "phone" as InterviewType,
     scheduledAt: "",
@@ -477,6 +478,31 @@ function InterviewsTab({ applicationId }: { applicationId: number }) {
     interviewers: "",
     notes: "",
   });
+
+  function resetForm() {
+    setForm({
+      type: "phone",
+      scheduledAt: "",
+      durationMinutes: "",
+      location: "",
+      interviewers: "",
+      notes: "",
+    });
+    setEditingId(null);
+  }
+
+  function openEditSheet(iv: Interview) {
+    setForm({
+      type: iv.type,
+      scheduledAt: iv.scheduledAt.slice(0, 16),
+      durationMinutes: iv.durationMinutes ? String(iv.durationMinutes) : "",
+      location: iv.location ?? "",
+      interviewers: getInterviewersArray(iv.interviewers).join(", "),
+      notes: iv.notes ?? "",
+    });
+    setEditingId(iv.id);
+    setSheetOpen(true);
+  }
 
   useEffect(() => {
     fetch(`/api/applications/${applicationId}/interviews`)
@@ -489,36 +515,40 @@ function InterviewsTab({ applicationId }: { applicationId: number }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
+    const body = {
+      type: form.type,
+      scheduledAt: form.scheduledAt,
+      durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : undefined,
+      location: form.location || undefined,
+      interviewers: form.interviewers || undefined,
+      notes: form.notes || undefined,
+    };
     try {
-      const res = await fetch(`/api/applications/${applicationId}/interviews`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: form.type,
-          scheduledAt: form.scheduledAt,
-          durationMinutes: form.durationMinutes
-            ? Number(form.durationMinutes)
-            : undefined,
-          location: form.location || undefined,
-          interviewers: form.interviewers || undefined,
-          notes: form.notes || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to schedule interview");
-      const interview = await res.json();
-      setInterviews((prev) => [...prev, interview]);
-      setForm({
-        type: "phone",
-        scheduledAt: "",
-        durationMinutes: "",
-        location: "",
-        interviewers: "",
-        notes: "",
-      });
+      if (editingId !== null) {
+        const res = await fetch(`/api/interviews/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error();
+        const updated = await res.json();
+        setInterviews((prev) => prev.map((iv) => (iv.id === editingId ? updated : iv)));
+        toast.success("Interview updated");
+      } else {
+        const res = await fetch(`/api/applications/${applicationId}/interviews`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error();
+        const created = await res.json();
+        setInterviews((prev) => [...prev, created]);
+        toast.success("Interview scheduled");
+      }
+      resetForm();
       setSheetOpen(false);
-      toast.success("Interview scheduled");
     } catch {
-      toast.error("Failed to schedule interview");
+      toast.error(editingId !== null ? "Failed to update interview" : "Failed to schedule interview");
     } finally {
       setIsSubmitting(false);
     }
@@ -556,14 +586,14 @@ function InterviewsTab({ applicationId }: { applicationId: number }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <Sheet open={sheetOpen} onOpenChange={(open) => { setSheetOpen(open); if (!open) resetForm(); }}>
           <SheetTrigger render={<Button size="sm" />}>
             <Plus className="size-4" />
             Schedule Interview
           </SheetTrigger>
           <SheetContent>
             <SheetHeader>
-              <SheetTitle>Schedule Interview</SheetTitle>
+              <SheetTitle>{editingId !== null ? "Edit Interview" : "Schedule Interview"}</SheetTitle>
             </SheetHeader>
             <form onSubmit={handleSubmit} className="mt-6 space-y-4 px-4">
               <div className="space-y-1">
@@ -652,7 +682,9 @@ function InterviewsTab({ applicationId }: { applicationId: number }) {
               </div>
 
               <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? "Scheduling..." : "Schedule Interview"}
+                {isSubmitting
+                  ? editingId !== null ? "Saving..." : "Scheduling..."
+                  : editingId !== null ? "Save Changes" : "Schedule Interview"}
               </Button>
             </form>
           </SheetContent>
@@ -697,6 +729,13 @@ function InterviewsTab({ applicationId }: { applicationId: number }) {
                           ))}
                         </SelectContent>
                       </Select>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditSheet(iv)}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
                       <DeleteInterviewDialog onConfirm={() => handleDelete(iv.id)} />
                     </div>
                   </div>
