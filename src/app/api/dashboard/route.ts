@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { applications, interviews } from "@/db/schema";
-import { eq, gte, lte, and, desc, asc } from "drizzle-orm";
+import { eq, gte, lte, and, desc, asc, notInArray } from "drizzle-orm";
 
 export async function GET() {
   const today = new Date().toISOString().split("T")[0];
@@ -44,14 +44,15 @@ export async function GET() {
   ).length;
   const offers = allApps.filter((a) => ["offer", "accepted"].includes(a.status)).length;
 
-  // Follow-up due
+  // Follow-up due (exclude terminal statuses to match reminders page behaviour)
   const followUpDue = await db
     .select()
     .from(applications)
     .where(
       and(
         eq(applications.archived, false),
-        lte(applications.followUpDate, today)
+        lte(applications.followUpDate, today),
+        notInArray(applications.status, ["accepted", "rejected", "withdrawn"])
       )
     )
     .orderBy(asc(applications.followUpDate))
